@@ -1,0 +1,602 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="NovaStore, todo lo que buscas en un solo lugar." />
+    <title>NovaStore — Compra fácil, vive mejor</title>
+    <script type="module" src="/src/main.tsx"></script>
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
+      referrerpolicy="no-referrer"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: { sans: ["Manrope", "sans-serif"] },
+            colors: {
+              ink: "#0F172A",
+              brand: "#2563EB",
+              mist: "#F8FAFC",
+              muted: "#64748B",
+              success: "#16A34A",
+              danger: "#DC2626",
+            },
+            boxShadow: {
+              soft: "0 12px 35px rgba(15,23,42,.08)",
+              lift: "0 20px 45px rgba(37,99,235,.14)",
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      html { scroll-behavior: smooth; }
+      body { font-family: "Manrope", sans-serif; }
+      .no-scrollbar::-webkit-scrollbar { display: none; }
+      .no-scrollbar { scrollbar-width: none; }
+      .modal-enter { animation: modalEnter .25s ease-out both; }
+      .drawer-enter { animation: drawerEnter .3s ease-out both; }
+      .success-ring { animation: successPop .55s cubic-bezier(.34,1.56,.64,1) both; }
+      .pulse-dot { animation: pulse 1.6s infinite; }
+      @keyframes modalEnter { from { opacity:0; transform:translateY(16px) scale(.98) } to { opacity:1; transform:none } }
+      @keyframes drawerEnter { from { transform:translateX(100%) } to { transform:none } }
+      @keyframes successPop { from { opacity:0; transform:scale(.45) rotate(-10deg) } to { opacity:1; transform:scale(1) } }
+      @keyframes pulse { 50% { opacity:.35; transform:scale(.8) } }
+      :focus-visible { outline: 3px solid rgba(37,99,235,.3); outline-offset: 2px; }
+    </style>
+  </head>
+  <body class="bg-mist text-ink antialiased">
+    <div id="app">
+      <header class="sticky top-0 z-40 border-b border-slate-200/80 bg-white/95 backdrop-blur">
+        <div class="bg-ink px-4 py-2 text-center text-[11px] font-semibold tracking-wide text-white sm:text-xs">
+          <i class="fa-solid fa-truck-fast mr-2 text-blue-400"></i>
+          Envío gratis en compras mayores a $999 MXN
+        </div>
+        <div class="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 lg:px-6">
+          <button onclick="navigate('inicio')" class="flex shrink-0 items-center gap-2" aria-label="Ir a inicio">
+            <span class="grid h-9 w-9 place-items-center rounded-xl bg-brand text-white shadow-lg shadow-blue-200">
+              <i class="fa-solid fa-n"></i>
+            </span>
+            <span class="hidden text-xl font-extrabold tracking-tight sm:block">Nova<span class="text-brand">Store</span></span>
+          </button>
+          <div class="relative mx-auto w-full max-w-xl">
+            <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-sm text-slate-400"></i>
+            <input
+              id="search"
+              type="search"
+              oninput="handleSearch(this.value)"
+              placeholder="¿Qué estás buscando hoy?"
+              class="h-11 w-full rounded-xl border border-slate-200 bg-slate-50 pl-11 pr-4 text-sm transition focus:border-brand focus:bg-white focus:outline-none focus:ring-4 focus:ring-blue-100"
+              aria-label="Buscar productos"
+            />
+            <div id="search-panel" class="absolute left-0 right-0 top-12 hidden max-h-80 overflow-y-auto rounded-2xl border border-slate-100 bg-white p-2 shadow-soft"></div>
+          </div>
+          <div class="hidden items-center gap-1 md:flex">
+            <button onclick="navigate('favoritos')" class="relative grid h-11 w-11 place-items-center rounded-xl text-slate-600 transition hover:bg-blue-50 hover:text-brand" title="Favoritos">
+              <i class="fa-regular fa-heart text-lg"></i><span id="fav-count" class="absolute right-0 top-0 hidden min-w-5 rounded-full bg-danger px-1 text-[10px] font-bold leading-5 text-white">0</span>
+            </button>
+            <button onclick="toggleCart()" class="relative grid h-11 w-11 place-items-center rounded-xl text-slate-600 transition hover:bg-blue-50 hover:text-brand" title="Carrito">
+              <i class="fa-solid fa-bag-shopping text-lg"></i><span id="cart-count" class="absolute right-0 top-0 hidden min-w-5 rounded-full bg-brand px-1 text-[10px] font-bold leading-5 text-white">0</span>
+            </button>
+            <button onclick="toast('Tu cuenta está lista para comprar')" class="grid h-11 w-11 place-items-center rounded-xl text-slate-600 transition hover:bg-blue-50 hover:text-brand" title="Mi cuenta"><i class="fa-regular fa-user text-lg"></i></button>
+            <button onclick="navigate('pedidos')" class="ml-1 flex h-11 items-center gap-2 rounded-xl border border-slate-200 px-3 text-xs font-bold text-slate-700 transition hover:border-brand hover:text-brand"><i class="fa-solid fa-box"></i> Mis pedidos</button>
+          </div>
+          <button onclick="toggleMobile()" class="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-slate-200 md:hidden" aria-label="Abrir menú"><i class="fa-solid fa-bars"></i></button>
+        </div>
+        <nav class="hidden border-t border-slate-100 md:block">
+          <div id="desktop-nav" class="mx-auto flex max-w-7xl items-center gap-1 overflow-x-auto px-6 py-2 no-scrollbar"></div>
+        </nav>
+        <div id="mobile-menu" class="hidden border-t border-slate-100 bg-white p-4 md:hidden">
+          <div id="mobile-nav" class="grid grid-cols-2 gap-2"></div>
+          <div class="mt-3 grid grid-cols-4 gap-2 border-t border-slate-100 pt-3">
+            <button onclick="navigate('favoritos')" class="rounded-xl bg-slate-50 py-3 text-xs font-bold"><i class="fa-regular fa-heart mb-1 block text-base text-brand"></i>Favoritos</button>
+            <button onclick="toggleCart()" class="rounded-xl bg-slate-50 py-3 text-xs font-bold"><i class="fa-solid fa-bag-shopping mb-1 block text-base text-brand"></i>Carrito</button>
+            <button onclick="toast('Tu cuenta está lista para comprar')" class="rounded-xl bg-slate-50 py-3 text-xs font-bold"><i class="fa-regular fa-user mb-1 block text-base text-brand"></i>Cuenta</button>
+            <button onclick="navigate('pedidos')" class="rounded-xl bg-slate-50 py-3 text-xs font-bold"><i class="fa-solid fa-box mb-1 block text-base text-brand"></i>Pedidos</button>
+          </div>
+        </div>
+      </header>
+
+      <main id="main-content" class="min-h-[65vh]"></main>
+
+      <footer class="mt-16 bg-ink text-white">
+        <div class="mx-auto grid max-w-7xl gap-10 px-5 py-12 md:grid-cols-4 lg:px-6">
+          <div class="md:col-span-2">
+            <div class="flex items-center gap-2 text-xl font-extrabold"><span class="grid h-9 w-9 place-items-center rounded-xl bg-brand"><i class="fa-solid fa-n"></i></span>NovaStore</div>
+            <p class="mt-4 max-w-md text-sm leading-6 text-slate-400">Una nueva forma de comprar. Productos que te encantan, entregas rápidas y una experiencia siempre simple.</p>
+          </div>
+          <div><p class="font-bold">Compra segura</p><ul class="mt-4 space-y-2 text-sm text-slate-400"><li>Pagos protegidos</li><li>Devoluciones fáciles</li><li>Soporte 24/7</li></ul></div>
+          <div><p class="font-bold">Síguenos</p><div class="mt-4 flex gap-2"><span class="grid h-9 w-9 place-items-center rounded-full bg-white/10"><i class="fa-brands fa-instagram"></i></span><span class="grid h-9 w-9 place-items-center rounded-full bg-white/10"><i class="fa-brands fa-facebook-f"></i></span><span class="grid h-9 w-9 place-items-center rounded-full bg-white/10"><i class="fa-brands fa-tiktok"></i></span></div></div>
+        </div>
+        <div class="border-t border-white/10 py-5 text-center text-xs text-slate-500">© 2025 NovaStore. Experiencia de compra simulada.</div>
+      </footer>
+    </div>
+
+    <div id="overlay" onclick="closeOverlays(event)" class="fixed inset-0 z-50 hidden bg-ink/60 p-3 backdrop-blur-sm sm:p-5"></div>
+    <div id="toast" class="pointer-events-none fixed bottom-5 left-1/2 z-[80] hidden -translate-x-1/2 rounded-xl bg-ink px-5 py-3 text-sm font-semibold text-white shadow-2xl"></div>
+
+    <script>
+      const IMG = {
+        tech1: "https://images.unsplash.com/photo-1721720671231-d3107662343f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        tech2: "https://images.unsplash.com/photo-1749545849681-37e7b302fdb6?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        tech3: "https://images.unsplash.com/photo-1550935268-e9e4bdc7c972?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        moda1: "https://images.unsplash.com/photo-1603808033176-9d134e6f2c74?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        moda2: "https://images.unsplash.com/photo-1511556820780-d912e42b4980?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        hogar1: "https://images.unsplash.com/photo-1648993880083-3080b2110bc0?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        hogar2: "https://images.unsplash.com/photo-1769733336073-7ddbeb680a60?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        belleza1: "https://images.unsplash.com/photo-1650958797279-1cc24e982c48?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        belleza2: "https://images.unsplash.com/photo-1511467007263-aa72ed0157dd?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        deporte1: "https://images.unsplash.com/photo-1584735935682-2f2b69dff9d2?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        deporte2: "https://images.unsplash.com/photo-1591311630200-ffa9120a540f?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+        hero: "https://images.unsplash.com/photo-1654555023156-0a1c9cdf1130?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixlib=rb-4.1.0&q=80&w=1080",
+      };
+
+      const products = [
+        { id: 1, category: "tecnologia", name: "Audífonos Nova Pro ANC", price: 1899, old: 2499, rating: 4.9, reviews: 328, discount: 24, image: IMG.tech2, desc: "Sonido envolvente, cancelación activa de ruido y hasta 36 horas de batería para acompañarte todo el día." },
+        { id: 2, category: "tecnologia", name: "Smartwatch Pulse S4", price: 2299, old: 2999, rating: 4.8, reviews: 196, discount: 23, image: IMG.tech3, desc: "Monitorea tu actividad, sueño y bienestar con una pantalla AMOLED de gran nitidez y resistencia al agua." },
+        { id: 3, category: "tecnologia", name: "Kit escritorio inalámbrico", price: 1299, old: 1599, rating: 4.7, reviews: 114, discount: 19, image: IMG.tech1, desc: "Convierte tu espacio en una estación productiva con carga inalámbrica y accesorios de diseño minimalista." },
+        { id: 4, category: "moda", name: "Tenis Urban Cloud", price: 1199, old: 1699, rating: 4.8, reviews: 247, discount: 29, image: IMG.moda1, desc: "Silueta urbana ultraligera con plantilla de memoria y materiales transpirables para comodidad absoluta." },
+        { id: 5, category: "moda", name: "Bolsa Atelier Essential", price: 899, old: 1299, rating: 4.6, reviews: 89, discount: 31, image: IMG.moda2, desc: "Diseño versátil, acabado premium y compartimentos inteligentes para organizar todos tus esenciales." },
+        { id: 6, category: "hogar", name: "Lámpara Aura Nórdica", price: 749, old: 999, rating: 4.9, reviews: 173, discount: 25, image: IMG.hogar1, desc: "Iluminación cálida regulable y una silueta contemporánea que transforma cualquier rincón de tu hogar." },
+        { id: 7, category: "hogar", name: "Set Deco Natural", price: 1099, old: 1399, rating: 4.7, reviews: 72, discount: 21, image: IMG.hogar2, desc: "Texturas naturales y tonos serenos reunidos en un set curado para renovar tus espacios fácilmente." },
+        { id: 8, category: "belleza", name: "Lentes Solar Éclat", price: 649, old: 899, rating: 4.7, reviews: 126, discount: 28, image: IMG.belleza1, desc: "Protección UV400 y montura ligera con una forma atemporal que eleva cualquier look." },
+        { id: 9, category: "belleza", name: "Beauty Tech Ritual", price: 1399, old: 1899, rating: 4.9, reviews: 211, discount: 26, image: IMG.belleza2, desc: "Tecnología de cuidado personal para una rutina precisa y resultados visibles desde casa." },
+        { id: 10, category: "deportes", name: "Set Fitness Core", price: 799, old: 1099, rating: 4.8, reviews: 304, discount: 27, image: IMG.deporte1, desc: "Todo lo necesario para entrenar fuerza y movilidad: mancuernas, bandas y guía de ejercicios." },
+        { id: 11, category: "deportes", name: "Tenis Run Velocity", price: 1499, old: 1999, rating: 4.8, reviews: 188, discount: 25, image: IMG.deporte2, desc: "Amortiguación reactiva y soporte estable para convertir cada kilómetro en tu mejor carrera." },
+        { id: 12, category: "hogar", name: "Home Office Studio", price: 2799, old: 3499, rating: 4.6, reviews: 58, discount: 20, image: IMG.hero, desc: "Accesorios esenciales de tecnología y organización para crear un espacio de trabajo inspirador." },
+      ];
+
+      const categories = [
+        { key: "tecnologia", label: "Tecnología", icon: "fa-laptop" },
+        { key: "moda", label: "Moda", icon: "fa-shirt" },
+        { key: "hogar", label: "Hogar", icon: "fa-couch" },
+        { key: "belleza", label: "Belleza", icon: "fa-wand-magic-sparkles" },
+        { key: "deportes", label: "Deportes", icon: "fa-dumbbell" },
+        { key: "ofertas", label: "Ofertas", icon: "fa-bolt" },
+      ];
+
+      let state = {
+        view: "inicio",
+        sort: "featured",
+        favorites: [],
+        cart: [],
+        orders: [],
+        detailId: null,
+        detailQty: 1,
+        checkoutStep: 1,
+        shipping: "standard",
+        payment: "card",
+        delivery: {},
+        completedOrder: null,
+      };
+
+      const money = value => new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(value);
+      const byId = id => products.find(p => p.id === Number(id));
+      const cartSubtotal = () => state.cart.reduce((sum, item) => sum + byId(item.id).price * item.qty, 0);
+      const shippingCost = () => state.shipping === "express" ? 199 : (cartSubtotal() >= 999 ? 0 : 99);
+
+      function init() {
+        renderNav();
+        render();
+        updateBadges();
+        document.addEventListener("keydown", e => { if (e.key === "Escape") hideOverlay(); });
+        document.addEventListener("click", e => {
+          const search = document.getElementById("search");
+          const panel = document.getElementById("search-panel");
+          if (search && panel && !search.parentElement.contains(e.target)) panel.classList.add("hidden");
+        });
+      }
+
+      function renderNav() {
+        const links = [{ key: "inicio", label: "Inicio", icon: "fa-house" }, ...categories];
+        document.getElementById("desktop-nav").innerHTML = links.map(item => `
+          <button data-nav="${item.key}" onclick="navigate('${item.key}')" class="nav-link whitespace-nowrap rounded-lg px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-blue-50 hover:text-brand">
+            ${item.key === "ofertas" ? '<span class="mr-1 inline-block h-2 w-2 rounded-full bg-danger"></span>' : ""}${item.label}
+          </button>`).join("");
+        document.getElementById("mobile-nav").innerHTML = links.map(item => `
+          <button onclick="navigate('${item.key}')" class="flex items-center gap-3 rounded-xl bg-slate-50 p-3 text-left text-sm font-bold"><i class="fa-solid ${item.icon} w-5 text-brand"></i>${item.label}</button>`).join("");
+      }
+
+      function navigate(view) {
+        if (!document.getElementById("overlay").classList.contains("hidden")) hideOverlay();
+        state.view = view;
+        document.getElementById("mobile-menu").classList.add("hidden");
+        document.getElementById("search-panel").classList.add("hidden");
+        render();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+
+      function render() {
+        document.querySelectorAll(".nav-link").forEach(el => {
+          const active = el.dataset.nav === state.view;
+          el.classList.toggle("bg-blue-50", active);
+          el.classList.toggle("text-brand", active);
+        });
+        if (state.view === "inicio") renderHome();
+        else if (state.view === "favoritos") renderFavorites();
+        else if (state.view === "pedidos") renderOrders();
+        else renderCategory(state.view);
+      }
+
+      function productCard(product) {
+        const liked = state.favorites.includes(product.id);
+        return `
+          <article class="group overflow-hidden rounded-2xl border border-slate-200/80 bg-white transition duration-300 hover:-translate-y-1 hover:border-blue-200 hover:shadow-lift">
+            <div class="relative aspect-[4/3] overflow-hidden bg-slate-100">
+              <img src="${product.image}" alt="${product.name}" class="h-full w-full object-cover transition duration-500 group-hover:scale-105" loading="lazy" />
+              <span class="absolute left-3 top-3 rounded-lg bg-danger px-2.5 py-1 text-[11px] font-extrabold text-white">-${product.discount}%</span>
+              <button onclick="toggleFavorite(${product.id})" class="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full bg-white/95 text-lg shadow-md transition hover:scale-110 ${liked ? "text-danger" : "text-slate-500"}" aria-label="Agregar a favoritos">
+                <i class="${liked ? "fa-solid" : "fa-regular"} fa-heart"></i>
+              </button>
+            </div>
+            <div class="p-4">
+              <p class="mb-1 text-[10px] font-extrabold uppercase tracking-[.18em] text-brand">${product.category}</p>
+              <h3 class="line-clamp-1 text-[15px] font-extrabold">${product.name}</h3>
+              <div class="mt-2 flex items-center gap-1 text-xs"><span class="text-amber-400"><i class="fa-solid fa-star"></i></span><span class="font-bold">${product.rating}</span><span class="text-slate-400">(${product.reviews})</span></div>
+              <div class="mt-3 flex items-end gap-2"><strong class="text-xl tracking-tight">${money(product.price)}</strong><span class="mb-0.5 text-xs text-slate-400 line-through">${money(product.old)}</span></div>
+              <p class="mt-1 text-[10px] font-semibold text-success">Hasta 6 MSI</p>
+              <div class="mt-4 grid grid-cols-[1fr_auto] gap-2">
+                <button onclick="openDetail(${product.id})" class="rounded-xl border border-slate-200 px-3 py-2.5 text-xs font-extrabold transition hover:border-brand hover:text-brand">Ver detalles</button>
+                <button onclick="addToCart(${product.id})" class="grid h-10 w-10 place-items-center rounded-xl bg-brand text-white shadow-md shadow-blue-200 transition hover:bg-blue-700" aria-label="Agregar al carrito"><i class="fa-solid fa-plus"></i></button>
+              </div>
+            </div>
+          </article>`;
+      }
+
+      function productsGrid(items) {
+        return `<div class="grid grid-cols-2 gap-3 sm:gap-5 lg:grid-cols-3 xl:grid-cols-4">${items.map(productCard).join("")}</div>`;
+      }
+
+      function sorted(items) {
+        const result = [...items];
+        if (state.sort === "low") result.sort((a,b) => a.price-b.price);
+        if (state.sort === "high") result.sort((a,b) => b.price-a.price);
+        return result;
+      }
+
+      function filterBar(count) {
+        return `<div class="mb-6 flex flex-col gap-3 rounded-2xl border border-slate-200 bg-white p-3 sm:flex-row sm:items-center sm:justify-between">
+          <p class="px-2 text-sm text-slate-500"><strong class="text-ink">${count}</strong> productos seleccionados</p>
+          <label class="flex items-center gap-2 text-xs font-bold text-slate-500">Ordenar por
+            <select onchange="state.sort=this.value;render()" class="rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-semibold text-ink focus:border-brand focus:outline-none">
+              <option value="featured" ${state.sort === "featured" ? "selected" : ""}>Destacados</option>
+              <option value="low" ${state.sort === "low" ? "selected" : ""}>Precio: menor a mayor</option>
+              <option value="high" ${state.sort === "high" ? "selected" : ""}>Precio: mayor a menor</option>
+            </select>
+          </label>
+        </div>`;
+      }
+
+      function renderHome() {
+        document.getElementById("main-content").innerHTML = `
+          <section class="mx-auto max-w-7xl px-4 pt-5 lg:px-6">
+            <div class="relative overflow-hidden rounded-[1.75rem] bg-ink text-white">
+              <img src="${IMG.hero}" alt="Tecnología para tu día" class="absolute inset-0 h-full w-full object-cover opacity-35 mix-blend-luminosity" />
+              <div class="absolute inset-0 bg-gradient-to-r from-ink via-ink/90 to-blue-900/30"></div>
+              <div class="relative z-10 max-w-2xl px-6 py-12 sm:px-10 sm:py-16 lg:py-20">
+                <span class="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-[11px] font-extrabold uppercase tracking-[.18em] text-blue-200 ring-1 ring-white/20"><span class="pulse-dot h-2 w-2 rounded-full bg-blue-400"></span> Nova Week</span>
+                <h1 class="mt-5 text-4xl font-extrabold leading-[1.05] tracking-[-.04em] sm:text-6xl">Lo que quieres,<br /><span class="text-blue-400">más cerca.</span></h1>
+                <p class="mt-5 max-w-lg text-sm leading-6 text-slate-300 sm:text-base">Hasta 35% de descuento en tecnología, moda y hogar. Compra hoy y disfruta entregas rápidas a todo México.</p>
+                <div class="mt-7 flex flex-wrap gap-3">
+                  <button onclick="navigate('ofertas')" class="rounded-xl bg-brand px-5 py-3 text-sm font-extrabold shadow-lg shadow-blue-950/40 transition hover:bg-blue-500">Ver ofertas <i class="fa-solid fa-arrow-right ml-2"></i></button>
+                  <button onclick="navigate('tecnologia')" class="rounded-xl bg-white/10 px-5 py-3 text-sm font-bold ring-1 ring-white/20 backdrop-blur transition hover:bg-white/20">Explorar tecnología</button>
+                </div>
+              </div>
+              <div class="absolute bottom-5 right-5 hidden rounded-2xl bg-white/95 p-4 text-ink shadow-soft sm:block">
+                <p class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Oferta del día</p>
+                <p class="mt-1 text-sm font-extrabold">Audífonos Nova Pro</p>
+                <p class="text-lg font-extrabold text-brand">${money(1899)}</p>
+              </div>
+            </div>
+          </section>
+          <section class="mx-auto max-w-7xl px-4 py-10 lg:px-6">
+            <div class="mb-5 flex items-end justify-between"><div><p class="text-xs font-extrabold uppercase tracking-[.18em] text-brand">Explora</p><h2 class="mt-1 text-2xl font-extrabold tracking-tight">Compra por categoría</h2></div></div>
+            <div class="grid grid-cols-3 gap-3 md:grid-cols-6">${categories.map((cat, i) => `
+              <button onclick="navigate('${cat.key}')" class="group rounded-2xl border border-slate-200 bg-white p-4 text-center transition hover:-translate-y-1 hover:border-blue-200 hover:shadow-soft">
+                <span class="mx-auto grid h-12 w-12 place-items-center rounded-2xl ${i === 5 ? "bg-red-50 text-danger" : "bg-blue-50 text-brand"} transition group-hover:scale-110"><i class="fa-solid ${cat.icon}"></i></span>
+                <span class="mt-3 block text-xs font-extrabold sm:text-sm">${cat.label}</span>
+              </button>`).join("")}</div>
+          </section>
+          <section class="mx-auto max-w-7xl px-4 lg:px-6">
+            <div class="mb-5"><p class="text-xs font-extrabold uppercase tracking-[.18em] text-brand">Elegidos para ti</p><h2 class="mt-1 text-2xl font-extrabold tracking-tight">Productos destacados</h2></div>
+            ${filterBar(products.length)}
+            ${productsGrid(sorted(products))}
+          </section>
+          <section class="mx-auto max-w-7xl px-4 py-12 lg:px-6">
+            <div class="grid gap-4 md:grid-cols-3">
+              ${[
+                ["fa-shield-halved","Compra protegida","Tus pagos y datos siempre seguros"],
+                ["fa-rotate-left","Cambios sin estrés","30 días para cambiar de opinión"],
+                ["fa-headset","Estamos contigo","Atención personalizada 24/7"]
+              ].map(x => `<div class="flex items-center gap-4 rounded-2xl bg-white p-5 ring-1 ring-slate-200"><span class="grid h-11 w-11 shrink-0 place-items-center rounded-xl bg-blue-50 text-brand"><i class="fa-solid ${x[0]}"></i></span><div><p class="text-sm font-extrabold">${x[1]}</p><p class="mt-1 text-xs text-slate-500">${x[2]}</p></div></div>`).join("")}
+            </div>
+          </section>`;
+      }
+
+      function renderCategory(category) {
+        const meta = categories.find(c => c.key === category) || categories[5];
+        const items = category === "ofertas" ? products.filter(p => p.discount >= 25) : products.filter(p => p.category === category);
+        document.getElementById("main-content").innerHTML = `
+          <section class="border-b border-slate-200 bg-white">
+            <div class="mx-auto max-w-7xl px-4 py-10 lg:px-6">
+              <span class="grid h-12 w-12 place-items-center rounded-2xl ${category === "ofertas" ? "bg-red-50 text-danger" : "bg-blue-50 text-brand"}"><i class="fa-solid ${meta.icon} text-xl"></i></span>
+              <p class="mt-5 text-xs font-extrabold uppercase tracking-[.18em] text-brand">NovaStore / ${meta.label}</p>
+              <h1 class="mt-2 text-3xl font-extrabold tracking-tight sm:text-4xl">${category === "ofertas" ? "Precios que no vuelven" : `Todo en ${meta.label}`}</h1>
+              <p class="mt-2 max-w-xl text-sm leading-6 text-slate-500">${category === "ofertas" ? "Descubre las mejores oportunidades antes de que se terminen." : "Una selección cuidada de productos con calidad, diseño y precios increíbles."}</p>
+            </div>
+          </section>
+          <section class="mx-auto max-w-7xl px-4 py-8 lg:px-6">${filterBar(items.length)}${productsGrid(sorted(items))}</section>`;
+      }
+
+      function renderFavorites() {
+        const items = products.filter(p => state.favorites.includes(p.id));
+        document.getElementById("main-content").innerHTML = `
+          <section class="mx-auto max-w-7xl px-4 py-10 lg:px-6">
+            <p class="text-xs font-extrabold uppercase tracking-[.18em] text-brand">Tu selección</p>
+            <h1 class="mt-2 text-3xl font-extrabold tracking-tight">Mis favoritos</h1>
+            <p class="mt-2 text-sm text-slate-500">Todo lo que te gustó, guardado en un solo lugar.</p>
+            <div class="mt-8">${items.length ? productsGrid(items) : emptyState("fa-heart", "Aún no tienes favoritos", "Guarda tus productos favoritos y encuéntralos aquí.", "Explorar productos", "inicio")}</div>
+          </section>`;
+      }
+
+      function renderOrders() {
+        document.getElementById("main-content").innerHTML = `
+          <section class="mx-auto max-w-5xl px-4 py-10 lg:px-6">
+            <p class="text-xs font-extrabold uppercase tracking-[.18em] text-brand">Seguimiento</p>
+            <h1 class="mt-2 text-3xl font-extrabold tracking-tight">Mis pedidos</h1>
+            <p class="mt-2 text-sm text-slate-500">Consulta tus compras realizadas durante esta sesión.</p>
+            <div class="mt-8 space-y-4">${state.orders.length ? state.orders.map(order => `
+              <article class="overflow-hidden rounded-2xl border border-slate-200 bg-white">
+                <div class="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">
+                  <div><p class="text-xs text-slate-500">Pedido</p><p class="font-extrabold">${order.folio}</p></div>
+                  <div><p class="text-xs text-slate-500">Fecha</p><p class="text-sm font-bold">${order.date}</p></div>
+                  <span class="rounded-full bg-green-50 px-3 py-1.5 text-xs font-extrabold text-success"><i class="fa-solid fa-circle-check mr-1"></i> ${order.status}</span>
+                </div>
+                <div class="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+                  <div class="flex -space-x-2">${order.items.slice(0,4).map(item => `<img src="${byId(item.id).image}" alt="" class="h-12 w-12 rounded-xl border-2 border-white object-cover" />`).join("")}</div>
+                  <div class="text-left sm:text-right"><p class="text-xs text-slate-500">${order.items.reduce((n,x)=>n+x.qty,0)} artículos</p><p class="text-lg font-extrabold">${money(order.total)}</p></div>
+                </div>
+              </article>`).join("") : emptyState("fa-box-open", "Todavía no hay pedidos", "Cuando finalices una compra aparecerá aquí.", "Comenzar a comprar", "inicio")}</div>
+          </section>`;
+      }
+
+      function emptyState(icon, title, text, button, view) {
+        return `<div class="rounded-3xl border border-dashed border-slate-300 bg-white px-5 py-16 text-center"><span class="mx-auto grid h-16 w-16 place-items-center rounded-2xl bg-blue-50 text-2xl text-brand"><i class="fa-solid ${icon}"></i></span><h2 class="mt-5 text-xl font-extrabold">${title}</h2><p class="mx-auto mt-2 max-w-sm text-sm text-slate-500">${text}</p><button onclick="navigate('${view}')" class="mt-6 rounded-xl bg-brand px-5 py-3 text-sm font-extrabold text-white">${button}</button></div>`;
+      }
+
+      function handleSearch(value) {
+        const panel = document.getElementById("search-panel");
+        const query = value.trim().toLowerCase();
+        if (!query) { panel.classList.add("hidden"); return; }
+        const results = products.filter(p => `${p.name} ${p.category}`.toLowerCase().includes(query)).slice(0,6);
+        panel.classList.remove("hidden");
+        panel.innerHTML = results.length ? results.map(p => `
+          <button onclick="openDetail(${p.id});document.getElementById('search-panel').classList.add('hidden')" class="flex w-full items-center gap-3 rounded-xl p-2 text-left transition hover:bg-slate-50">
+            <img src="${p.image}" class="h-12 w-12 rounded-lg object-cover" alt="" />
+            <span class="min-w-0 flex-1"><span class="block truncate text-sm font-extrabold">${p.name}</span><span class="text-xs capitalize text-slate-400">${p.category}</span></span><strong class="text-sm">${money(p.price)}</strong>
+          </button>`).join("") : `<div class="p-6 text-center text-sm text-slate-500"><i class="fa-solid fa-magnifying-glass mb-2 block text-xl text-slate-300"></i>No encontramos coincidencias</div>`;
+      }
+
+      function toggleFavorite(id) {
+        if (state.favorites.includes(id)) {
+          state.favorites = state.favorites.filter(x => x !== id);
+          toast("Eliminado de favoritos");
+        } else {
+          state.favorites.push(id);
+          toast("Guardado en favoritos");
+        }
+        updateBadges();
+        render();
+      }
+
+      function addToCart(id, qty = 1) {
+        const existing = state.cart.find(x => x.id === id);
+        if (existing) existing.qty += qty; else state.cart.push({ id, qty });
+        updateBadges();
+        toast("Producto agregado al carrito");
+        if (state.detailId) hideOverlay();
+      }
+
+      function updateBadges() {
+        const cartCount = state.cart.reduce((sum, x) => sum + x.qty, 0);
+        [["cart-count", cartCount], ["fav-count", state.favorites.length]].forEach(([id, count]) => {
+          const el = document.getElementById(id);
+          el.textContent = count;
+          el.classList.toggle("hidden", count === 0);
+        });
+      }
+
+      function openDetail(id) {
+        state.detailId = id;
+        state.detailQty = 1;
+        renderDetail();
+      }
+
+      function renderDetail() {
+        const p = byId(state.detailId);
+        showOverlay(`
+          <div class="modal-enter m-auto w-full max-w-4xl overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div class="grid md:grid-cols-2">
+              <div class="relative min-h-72 bg-slate-100"><img src="${p.image}" alt="${p.name}" class="absolute inset-0 h-full w-full object-cover" /><span class="absolute left-4 top-4 rounded-lg bg-danger px-3 py-1.5 text-xs font-extrabold text-white">-${p.discount}%</span></div>
+              <div class="relative p-6 sm:p-8">
+                <button onclick="hideOverlay()" class="absolute right-4 top-4 grid h-9 w-9 place-items-center rounded-full bg-slate-100 text-slate-500" aria-label="Cerrar"><i class="fa-solid fa-xmark"></i></button>
+                <p class="text-xs font-extrabold uppercase tracking-[.18em] text-brand">${p.category}</p>
+                <h2 class="mt-2 pr-8 text-2xl font-extrabold tracking-tight">${p.name}</h2>
+                <div class="mt-3 flex items-center gap-2 text-sm"><span class="text-amber-400"><i class="fa-solid fa-star"></i> ${p.rating}</span><span class="text-slate-400">${p.reviews} reseñas</span></div>
+                <p class="mt-5 text-sm leading-6 text-slate-500">${p.desc}</p>
+                <div class="mt-6 flex items-end gap-3"><strong id="detail-price" class="text-3xl tracking-tight">${money(p.price * state.detailQty)}</strong><span class="mb-1 text-sm text-slate-400 line-through">${money(p.old * state.detailQty)}</span></div>
+                <div class="mt-6 flex items-center justify-between rounded-xl bg-slate-50 p-3"><span class="text-sm font-bold">Cantidad</span><div class="flex items-center gap-3"><button onclick="changeDetailQty(-1)" class="grid h-9 w-9 place-items-center rounded-lg border border-slate-200 bg-white"><i class="fa-solid fa-minus text-xs"></i></button><strong id="detail-qty">${state.detailQty}</strong><button onclick="changeDetailQty(1)" class="grid h-9 w-9 place-items-center rounded-lg bg-ink text-white"><i class="fa-solid fa-plus text-xs"></i></button></div></div>
+                <button onclick="addToCart(${p.id}, state.detailQty)" class="mt-5 w-full rounded-xl bg-brand py-3.5 text-sm font-extrabold text-white shadow-lg shadow-blue-200 transition hover:bg-blue-700"><i class="fa-solid fa-bag-shopping mr-2"></i>Agregar al carrito</button>
+                <div class="mt-4 flex justify-center gap-4 text-[11px] font-semibold text-slate-400"><span><i class="fa-solid fa-truck mr-1 text-success"></i>Envío rápido</span><span><i class="fa-solid fa-shield-halved mr-1 text-success"></i>Compra segura</span></div>
+              </div>
+            </div>
+          </div>`);
+      }
+
+      function changeDetailQty(delta) {
+        state.detailQty = Math.max(1, Math.min(9, state.detailQty + delta));
+        const p = byId(state.detailId);
+        document.getElementById("detail-qty").textContent = state.detailQty;
+        document.getElementById("detail-price").textContent = money(p.price * state.detailQty);
+      }
+
+      function toggleCart() {
+        document.getElementById("mobile-menu").classList.add("hidden");
+        renderCart();
+      }
+
+      function renderCart() {
+        const subtotal = cartSubtotal();
+        const standardShipping = subtotal >= 999 ? 0 : 99;
+        showOverlay(`
+          <aside class="drawer-enter ml-auto flex h-full w-full max-w-md flex-col bg-white shadow-2xl">
+            <div class="flex items-center justify-between border-b border-slate-200 p-5"><div><p class="text-xs font-bold text-brand">TU COMPRA</p><h2 class="text-xl font-extrabold">Carrito <span class="text-sm font-medium text-slate-400">(${state.cart.reduce((n,x)=>n+x.qty,0)})</span></h2></div><button onclick="hideOverlay()" class="grid h-10 w-10 place-items-center rounded-full bg-slate-100"><i class="fa-solid fa-xmark"></i></button></div>
+            <div class="no-scrollbar flex-1 overflow-y-auto p-5">${state.cart.length ? `
+              <div class="space-y-4">${state.cart.map(item => { const p=byId(item.id); return `
+                <div class="flex gap-3 rounded-2xl border border-slate-100 p-3">
+                  <img src="${p.image}" alt="${p.name}" class="h-20 w-20 rounded-xl object-cover" />
+                  <div class="min-w-0 flex-1"><p class="truncate text-sm font-extrabold">${p.name}</p><p class="mt-1 text-sm font-bold text-brand">${money(p.price)}</p><div class="mt-2 flex items-center justify-between"><div class="flex items-center gap-2"><button onclick="updateCart(${p.id},-1)" class="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-xs">−</button><span class="text-xs font-bold">${item.qty}</span><button onclick="updateCart(${p.id},1)" class="grid h-7 w-7 place-items-center rounded-lg border border-slate-200 text-xs">+</button></div><button onclick="removeCart(${p.id})" class="text-xs font-bold text-danger">Eliminar</button></div></div>
+                </div>`}).join("")}</div>
+              ${subtotal < 999 ? `<div class="mt-5 rounded-xl bg-blue-50 p-3 text-xs font-semibold text-blue-700">Agrega <strong>${money(999-subtotal)}</strong> para obtener envío gratis.</div>` : `<div class="mt-5 rounded-xl bg-green-50 p-3 text-xs font-bold text-success"><i class="fa-solid fa-circle-check mr-1"></i> ¡Tu envío es gratis!</div>`}
+            ` : emptyState("fa-bag-shopping", "Tu carrito está vacío", "Agrega productos y vuelve para finalizar tu compra.", "Explorar", "inicio")}</div>
+            ${state.cart.length ? `<div class="border-t border-slate-200 bg-white p-5"><div class="space-y-2 text-sm"><div class="flex justify-between text-slate-500"><span>Subtotal</span><span>${money(subtotal)}</span></div><div class="flex justify-between text-slate-500"><span>Envío estándar</span><span class="${!standardShipping ? "font-bold text-success" : ""}">${standardShipping ? money(standardShipping) : "Gratis"}</span></div><div class="flex justify-between border-t border-slate-100 pt-3 text-lg font-extrabold"><span>Total</span><span>${money(subtotal+standardShipping)}</span></div></div><button onclick="startCheckout()" class="mt-4 w-full rounded-xl bg-brand py-3.5 text-sm font-extrabold text-white shadow-lg shadow-blue-200">Finalizar compra <i class="fa-solid fa-arrow-right ml-2"></i></button></div>` : ""}
+          </aside>`, true);
+      }
+
+      function updateCart(id, delta) {
+        const item = state.cart.find(x => x.id === id);
+        item.qty += delta;
+        if (item.qty < 1) state.cart = state.cart.filter(x => x.id !== id);
+        updateBadges(); renderCart();
+      }
+      function removeCart(id) { state.cart = state.cart.filter(x => x.id !== id); updateBadges(); renderCart(); }
+
+      function startCheckout() {
+        state.checkoutStep = 1;
+        state.shipping = "standard";
+        state.payment = "card";
+        renderCheckout();
+      }
+
+      function renderCheckout() {
+        const steps = ["Entrega","Envío","Pago","Confirmar","Listo"];
+        showOverlay(`
+          <div class="modal-enter m-auto flex max-h-[calc(100vh-24px)] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div class="border-b border-slate-100 p-5 sm:p-6">
+              <div class="flex items-center justify-between"><div><p class="text-xs font-extrabold uppercase tracking-[.18em] text-brand">Checkout seguro</p><h2 class="mt-1 text-xl font-extrabold">${steps[state.checkoutStep-1]}</h2></div>${state.checkoutStep < 5 ? `<button onclick="hideOverlay()" class="grid h-9 w-9 place-items-center rounded-full bg-slate-100"><i class="fa-solid fa-xmark"></i></button>` : ""}</div>
+              <div class="mt-5 flex items-center">${steps.map((s,i) => `<div class="flex flex-1 items-center ${i===4?"max-w-7":""}"><span class="grid h-7 w-7 shrink-0 place-items-center rounded-full text-[10px] font-extrabold ${i+1 <= state.checkoutStep ? "bg-brand text-white" : "bg-slate-100 text-slate-400"}">${i+1 < state.checkoutStep ? '<i class="fa-solid fa-check"></i>' : i+1}</span>${i<4?`<span class="h-0.5 w-full ${i+1 < state.checkoutStep ? "bg-brand" : "bg-slate-100"}"></span>`:""}</div>`).join("")}</div>
+            </div>
+            <div id="checkout-body" class="no-scrollbar flex-1 overflow-y-auto p-5 sm:p-7">${checkoutBody()}</div>
+          </div>`);
+      }
+
+      function checkoutBody() {
+        if (state.checkoutStep === 1) return `
+          <form id="delivery-form" onsubmit="saveDelivery(event)" class="space-y-4">
+            <div class="grid gap-4 sm:grid-cols-2">
+              ${field("name","Nombre completo","text","Mariana López")}
+              ${field("phone","Teléfono","tel","55 1234 5678")}
+            </div>
+            ${field("address","Calle y número","text","Av. Reforma 120")}
+            <div class="grid gap-4 sm:grid-cols-3">${field("zip","C.P.","text","06600")}${field("city","Ciudad","text","Ciudad de México")}${field("state","Estado","text","CDMX")}</div>
+            <label class="block"><span class="mb-2 block text-xs font-bold text-slate-600">Referencias (opcional)</span><textarea name="notes" rows="2" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none" placeholder="Entre calles, color de puerta...">${state.delivery.notes||""}</textarea></label>
+            <button class="w-full rounded-xl bg-brand py-3.5 text-sm font-extrabold text-white">Continuar a envío <i class="fa-solid fa-arrow-right ml-2"></i></button>
+          </form>`;
+        if (state.checkoutStep === 2) return `
+          <div class="space-y-3">
+            ${shippingOption("standard","fa-truck","Envío estándar","3 a 5 días hábiles", cartSubtotal() >= 999 ? "Gratis" : money(99))}
+            ${shippingOption("express","fa-bolt","Envío exprés","1 a 2 días hábiles",money(199))}
+          </div>${checkoutButtons("Continuar al pago")}`;
+        if (state.checkoutStep === 3) return `
+          <div class="grid gap-3 sm:grid-cols-3">
+            ${paymentOption("card","fa-credit-card","Tarjeta")}
+            ${paymentOption("spei","fa-building-columns","SPEI")}
+            ${paymentOption("oxxo","fa-store","OXXO Pay")}
+          </div>
+          <div class="mt-5 rounded-2xl bg-slate-50 p-5">
+            ${state.payment === "card" ? `<div class="space-y-4">${field("card","Número de tarjeta","text","4242 4242 4242 4242")}<div class="grid grid-cols-2 gap-4">${field("expiry","Vencimiento","text","12/28")}${field("cvv","CVV","text","123")}</div></div>` : `<div class="py-5 text-center"><i class="fa-solid ${state.payment === "spei" ? "fa-building-columns" : "fa-store"} text-3xl text-brand"></i><p class="mt-3 text-sm font-bold">Recibirás las instrucciones de pago al confirmar.</p><p class="mt-1 text-xs text-slate-500">Esta es una simulación; no se realizará ningún cobro.</p></div>`}
+          </div>${checkoutButtons("Revisar pedido")}`;
+        if (state.checkoutStep === 4) return `
+          <div class="grid gap-5 sm:grid-cols-[1fr_280px]">
+            <div><p class="mb-3 text-xs font-extrabold uppercase tracking-wider text-slate-400">Tus productos</p><div class="space-y-3">${state.cart.map(item => {const p=byId(item.id);return `<div class="flex items-center gap-3"><img src="${p.image}" class="h-14 w-14 rounded-xl object-cover" alt="" /><div class="min-w-0 flex-1"><p class="truncate text-sm font-bold">${p.name}</p><p class="text-xs text-slate-400">Cantidad: ${item.qty}</p></div><strong class="text-sm">${money(p.price*item.qty)}</strong></div>`}).join("")}</div></div>
+            <div class="rounded-2xl bg-slate-50 p-5"><p class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Resumen</p><div class="mt-4 space-y-2 text-sm"><div class="flex justify-between"><span class="text-slate-500">Subtotal</span><span>${money(cartSubtotal())}</span></div><div class="flex justify-between"><span class="text-slate-500">Envío</span><span>${shippingCost() ? money(shippingCost()) : "Gratis"}</span></div><div class="flex justify-between border-t border-slate-200 pt-3 text-lg font-extrabold"><span>Total</span><span>${money(cartSubtotal()+shippingCost())}</span></div></div><p class="mt-4 rounded-lg bg-white p-2 text-[10px] text-slate-500"><i class="fa-solid fa-location-dot mr-1 text-brand"></i>${state.delivery.address}, ${state.delivery.city}</p></div>
+          </div>${checkoutButtons("Confirmar compra", true)}`;
+        return `
+          <div class="py-5 text-center">
+            <span class="success-ring mx-auto grid h-24 w-24 place-items-center rounded-full bg-green-50 text-4xl text-success"><i class="fa-solid fa-check"></i></span>
+            <p class="mt-6 text-xs font-extrabold uppercase tracking-[.2em] text-success">Pago aprobado</p>
+            <h3 class="mt-2 text-3xl font-extrabold tracking-tight">¡Gracias por tu compra!</h3>
+            <p class="mx-auto mt-3 max-w-md text-sm leading-6 text-slate-500">Estamos preparando tu pedido. Recibirás actualizaciones de entrega muy pronto.</p>
+            <div class="mx-auto mt-6 max-w-xs rounded-2xl border border-slate-200 p-4"><p class="text-xs text-slate-400">Número de pedido</p><p class="mt-1 text-xl font-extrabold">${state.completedOrder.folio}</p></div>
+            <button onclick="saveOrder()" class="mt-7 rounded-xl bg-brand px-6 py-3.5 text-sm font-extrabold text-white"><i class="fa-solid fa-box mr-2"></i>Enviar a Mis Pedidos</button>
+          </div>`;
+      }
+
+      function field(name,label,type,placeholder) {
+        const value = state.delivery[name] || "";
+        return `<label class="block"><span class="mb-2 block text-xs font-bold text-slate-600">${label}</span><input required name="${name}" type="${type}" value="${value}" placeholder="${placeholder}" class="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:border-brand focus:outline-none focus:ring-4 focus:ring-blue-100" /></label>`;
+      }
+      function shippingOption(value,icon,title,desc,price) {
+        return `<button onclick="state.shipping='${value}';renderCheckout()" class="flex w-full items-center gap-4 rounded-2xl border p-4 text-left transition ${state.shipping===value?"border-brand bg-blue-50 ring-2 ring-blue-100":"border-slate-200"}"><span class="grid h-11 w-11 place-items-center rounded-xl bg-white text-brand shadow-sm"><i class="fa-solid ${icon}"></i></span><span class="flex-1"><strong class="block text-sm">${title}</strong><span class="text-xs text-slate-500">${desc}</span></span><strong class="text-sm ${price==="Gratis"?"text-success":""}">${price}</strong><i class="fa-solid fa-circle-check ${state.shipping===value?"text-brand":"text-slate-200"}"></i></button>`;
+      }
+      function paymentOption(value,icon,label) {
+        return `<button onclick="state.payment='${value}';renderCheckout()" class="rounded-2xl border p-4 text-center transition ${state.payment===value?"border-brand bg-blue-50 ring-2 ring-blue-100":"border-slate-200"}"><i class="fa-solid ${icon} text-xl text-brand"></i><span class="mt-2 block text-xs font-extrabold">${label}</span></button>`;
+      }
+      function checkoutButtons(label, confirm=false) {
+        return `<div class="mt-7 flex gap-3"><button onclick="state.checkoutStep--;renderCheckout()" class="rounded-xl border border-slate-200 px-5 py-3 text-sm font-bold"><i class="fa-solid fa-arrow-left mr-2"></i>Atrás</button><button onclick="${confirm?"completePurchase()":"state.checkoutStep++;renderCheckout()"}" class="flex-1 rounded-xl bg-brand px-5 py-3 text-sm font-extrabold text-white">${label}</button></div>`;
+      }
+      function saveDelivery(event) {
+        event.preventDefault();
+        const data = Object.fromEntries(new FormData(event.target).entries());
+        if (data.phone.replace(/\D/g,"").length < 10 || data.zip.replace(/\D/g,"").length < 5) { toast("Revisa tu teléfono y código postal"); return; }
+        state.delivery = data; state.checkoutStep = 2; renderCheckout();
+      }
+      function completePurchase() {
+        const folio = "#NS-" + Math.floor(10000 + Math.random()*89999);
+        state.completedOrder = { folio, date: new Date().toLocaleDateString("es-MX", { day:"numeric", month:"long", year:"numeric" }), status: "Confirmado", items: state.cart.map(x=>({...x})), total: cartSubtotal()+shippingCost() };
+        state.checkoutStep = 5; renderCheckout();
+      }
+      function saveOrder() {
+        if (state.completedOrder) state.orders.unshift(state.completedOrder);
+        state.cart = []; state.completedOrder = null; updateBadges(); hideOverlay(); navigate("pedidos"); toast("Pedido guardado correctamente");
+      }
+
+      function showOverlay(content, drawer=false) {
+        const overlay = document.getElementById("overlay");
+        overlay.innerHTML = content;
+        overlay.classList.remove("hidden");
+        overlay.classList.add("flex");
+        if (drawer) overlay.classList.remove("p-3","sm:p-5"); else overlay.classList.add("p-3","sm:p-5");
+        document.body.classList.add("overflow-hidden");
+      }
+      function hideOverlay() {
+        const overlay = document.getElementById("overlay");
+        overlay.classList.add("hidden");
+        overlay.classList.remove("flex");
+        overlay.innerHTML = "";
+        state.detailId = null;
+        document.body.classList.remove("overflow-hidden");
+      }
+      function closeOverlays(event) { if (event.target.id === "overlay") hideOverlay(); }
+      function toggleMobile() { document.getElementById("mobile-menu").classList.toggle("hidden"); }
+      let toastTimer;
+      function toast(message) {
+        const el = document.getElementById("toast");
+        el.innerHTML = `<i class="fa-solid fa-circle-check mr-2 text-green-400"></i>${message}`;
+        el.classList.remove("hidden");
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => el.classList.add("hidden"), 2200);
+      }
+      init();
+    </script>
+  </body>
+</html>
